@@ -1,16 +1,15 @@
 Name:           gnome-shell
-Version:        3.38.1
-Release:        2%{?dist}
+Version:        40.0~alpha
+Release:        1%{?dist}
 Summary:        Window management and application launching for GNOME
 
 License:        GPLv2+
 URL:            https://wiki.gnome.org/Projects/GnomeShell
 #VCS:           git:git://git.gnome.org/gnome-shell
-Source0:        http://download.gnome.org/sources/gnome-shell/3.38/%{name}-%{version}.tar.xz
+Source0:        http://download.gnome.org/sources/gnome-shell/40/%{name}-40.alpha.tar.xz
 
 # Replace Epiphany with Firefox in the default favourite apps list
 Patch1: gnome-shell-favourite-apps-firefox.patch
-Patch2: 0001-windowManager-Avoid-calling-meta_window_actor_thaw-w.patch
 
 %define eds_version 3.33.1
 %define gnome_desktop_version 3.35.91
@@ -18,7 +17,7 @@ Patch2: 0001-windowManager-Avoid-calling-meta_window_actor_thaw-w.patch
 %define gobject_introspection_version 1.49.1
 %define gjs_version 1.57.3
 %define gtk3_version 3.15.0
-%define mutter_version 3.38.0
+%define mutter_version 40.0~alpha
 %define polkit_version 0.100
 %define gsettings_desktop_schemas_version 3.33.1
 %define ibus_version 1.5.2
@@ -143,7 +142,7 @@ innovative user interface concepts to provide a visually attractive and
 easy to use experience.
 
 %prep
-%autosetup -S git
+%autosetup -S git -n %{name}-40.alpha
 
 %build
 %meson -Dextensions_app=false
@@ -218,6 +217,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/evolution-calendar.de
 %{_mandir}/man1/gnome-shell.1*
 
 %changelog
+* Wed Dec 02 2020 Florian Müllner <fmuellner@redhat.com> - 40.alpha-1
+- Update to 40.alpha
+
 * Tue Oct 13 2020 Florian Müllner <fmuellner@redhat.com> - 3.38.1-2
 - Fix crash on size change (non-)transitions
 
