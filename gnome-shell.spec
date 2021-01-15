@@ -1,12 +1,12 @@
 Name:           gnome-shell
-Version:        40.0~alpha
+Version:        40.0~alpha.1
 Release:        1%{?dist}
 Summary:        Window management and application launching for GNOME
 
 License:        GPLv2+
 URL:            https://wiki.gnome.org/Projects/GnomeShell
 #VCS:           git:git://git.gnome.org/gnome-shell
-Source0:        http://download.gnome.org/sources/gnome-shell/40/%{name}-40.alpha.tar.xz
+Source0: http://download.gnome.org/sources/gnome-shell/40/%{name}-40.alpha.1.tar.xz
 
 # Replace Epiphany with Firefox in the default favourite apps list
 Patch1: gnome-shell-favourite-apps-firefox.patch
@@ -17,16 +17,16 @@ Patch1: gnome-shell-favourite-apps-firefox.patch
 %define gobject_introspection_version 1.49.1
 %define gjs_version 1.57.3
 %define gtk3_version 3.15.0
-%define mutter_version 40.0~alpha
+%define gtk4_version 4.0.0
+%define mutter_version 40.0~alpha.1.1
 %define polkit_version 0.100
-%define gsettings_desktop_schemas_version 3.33.1
+%define gsettings_desktop_schemas_version 40~alpha
 %define ibus_version 1.5.2
 %define gnome_bluetooth_version 1:3.9.0
 %define gstreamer_version 1.4.5
 %define pipewire_version 0.3.0
 %define gnome_settings_daemon_version 3.37.1
 
-BuildRequires:  asciidoc
 BuildRequires:  bash-completion
 BuildRequires:  gcc
 BuildRequires:  meson
@@ -47,12 +47,11 @@ BuildRequires:  NetworkManager-libnm-devel
 BuildRequires:  polkit-devel >= %{polkit_version}
 BuildRequires:  startup-notification-devel
 BuildRequires:  systemd-devel
-# for theme generation
-BuildRequires:  sassc
 # for screencast recorder functionality
 BuildRequires:  gstreamer1-devel >= %{gstreamer_version}
 BuildRequires:  pkgconfig(libpipewire-0.3) >= %{pipewire_version}
 BuildRequires:  gtk3-devel >= %{gtk3_version}
+BuildRequires:  gtk4-devel >= %{gtk4_version}
 BuildRequires:  gettext >= 0.19.6
 BuildRequires:  libcanberra-devel
 BuildRequires:  python3
@@ -81,6 +80,7 @@ Requires:       gnome-session-xsession
 Requires:       gobject-introspection%{?_isa} >= %{gobject_introspection_version}
 Requires:       gjs%{?_isa} >= %{gjs_version}
 Requires:       gtk3%{?_isa} >= %{gtk3_version}
+Requires:       gtk4%{?_isa} >= %{gtk4_version}
 Requires:       libnma%{?_isa}
 # needed for loading SVG's via gdk-pixbuf
 Requires:       librsvg2%{?_isa}
@@ -142,7 +142,7 @@ innovative user interface concepts to provide a visually attractive and
 easy to use experience.
 
 %prep
-%autosetup -S git -n %{name}-40.alpha
+%autosetup -S git -n %{name}-40.alpha.1
 
 %build
 %meson -Dextensions_app=false
@@ -178,6 +178,7 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/evolution-calendar.de
 %{_datadir}/bash-completion/completions/gnome-extensions
 %{_datadir}/gnome-control-center/keybindings/50-gnome-shell-system.xml
 %{_datadir}/gnome-shell/
+%{_datadir}/dbus-1/services/org.gnome.ScreenSaver.service
 %{_datadir}/dbus-1/services/org.gnome.Shell.CalendarServer.service
 %{_datadir}/dbus-1/services/org.gnome.Shell.Extensions.service
 %{_datadir}/dbus-1/services/org.gnome.Shell.HotplugSniffer.service
@@ -217,6 +218,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/evolution-calendar.de
 %{_mandir}/man1/gnome-shell.1*
 
 %changelog
+* Fri Jan 15 2021 Florian Müllner <fmuellner@redhat.com> - 40.alpha.1-1
+- Update to 40.alpha.1
+
 * Wed Dec 02 2020 Florian Müllner <fmuellner@redhat.com> - 40.alpha-1
 - Update to 40.alpha
 
