@@ -1,6 +1,6 @@
 Name:           gnome-shell
 Version:        40.0~alpha.1.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Window management and application launching for GNOME
 
 License:        GPLv2+
@@ -26,6 +26,7 @@ Patch1: gnome-shell-favourite-apps-firefox.patch
 %define gstreamer_version 1.4.5
 %define pipewire_version 0.3.0
 %define gnome_settings_daemon_version 3.37.1
+%define libgweather_version 40~alpha
 
 BuildRequires:  bash-completion
 BuildRequires:  gcc
@@ -109,7 +110,7 @@ Requires:       python3%{_isa}
 Requires:       switcheroo-control
 # needed for clocks/weather integration
 Requires:       geoclue2-libs%{?_isa}
-Requires:       libgweather%{?_isa}
+Requires:       libgweather%{?_isa} >= %{libgweather_version}
 # needed for thunderbolt support
 Requires:       bolt%{?_isa}
 # Needed for launching flatpak apps etc
@@ -218,6 +219,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/evolution-calendar.de
 %{_mandir}/man1/gnome-shell.1*
 
 %changelog
+* Tue Jan 19 2021 Kalev Lember <klember@redhat.com> - 40.0~alpha.1.1-2
+- Require libgweather >= 40~alpha for new application_id property
+
 * Mon Jan 18 2021 Florian Müllner <fmuellner@redhat.com> - 40.alpha.1.1-1
 - Update to 40.alpha.1.1
 
