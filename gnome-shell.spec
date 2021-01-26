@@ -1,6 +1,6 @@
 Name:           gnome-shell
 Version:        40.0~alpha.1.1
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Window management and application launching for GNOME
 
 License:        GPLv2+
@@ -219,6 +219,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/evolution-calendar.de
 %{_mandir}/man1/gnome-shell.1*
 
 %changelog
+* Tue Jan 26 2021 Fedora Release Engineering <releng@fedoraproject.org> - 40.0~alpha.1.1-3
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_34_Mass_Rebuild
+
 * Tue Jan 19 2021 Kalev Lember <klember@redhat.com> - 40.0~alpha.1.1-2
 - Require libgweather >= 40~alpha for new application_id property
 
