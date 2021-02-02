@@ -1,12 +1,12 @@
 Name:           gnome-shell
 Version:        40.0~alpha.1.1
-Release:        3%{?dist}
+Release:        4.20210202git9ce666ac1%{?dist}
 Summary:        Window management and application launching for GNOME
 
 License:        GPLv2+
 URL:            https://wiki.gnome.org/Projects/GnomeShell
 #VCS:           git:git://git.gnome.org/gnome-shell
-Source0: http://download.gnome.org/sources/gnome-shell/40/%{name}-40.alpha.1.1.tar.xz
+Source0: http://download.gnome.org/sources/gnome-shell/40/%{name}-40.alpha.1.1-94-g9ce666ac1.tar.xz
 
 # Replace Epiphany with Firefox in the default favourite apps list
 Patch1: gnome-shell-favourite-apps-firefox.patch
@@ -143,7 +143,7 @@ innovative user interface concepts to provide a visually attractive and
 easy to use experience.
 
 %prep
-%autosetup -S git -n %{name}-40.alpha.1.1
+%autosetup -S git -n %{name}-40.beta
 
 %build
 %meson -Dextensions_app=false
@@ -219,6 +219,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/evolution-calendar.de
 %{_mandir}/man1/gnome-shell.1*
 
 %changelog
+* Tue Feb 02 2021 Florian Müllner <fmuellner@redhat.com> - 40.0~alpha.1.1-4.20210202git9ce666ac1
+- Build snapshot of current upstream
+
 * Tue Jan 26 2021 Fedora Release Engineering <releng@fedoraproject.org> - 40.0~alpha.1.1-3
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_34_Mass_Rebuild
 
