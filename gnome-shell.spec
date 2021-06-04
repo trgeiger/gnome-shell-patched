@@ -18,10 +18,10 @@ Patch1: gnome-shell-favourite-apps-firefox.patch
 Patch2: 923.patch
 
 #$ Overview optimization
-Patch3: 1862.patch
-Patch4: 1862-css.patch
-Patch5: 1869.patch
-Patch6: 1440.patch
+# Patch3: 1440.patch
+Patch4: 1862.patch
+Patch5: 1862-css.patch
+Patch6: 1869.patch
 
 
 # Some users might have a broken PAM config, so we really need this
