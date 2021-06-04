@@ -1,0 +1,201 @@
+From 3ce6efefeb20b31ea78f2c37883618f85cef3696 Mon Sep 17 00:00:00 2001
+From: Daniel van Vugt <daniel.van.vugt@canonical.com>
+Date: Wed, 16 Sep 2020 14:52:19 +0800
+Subject: [PATCH 1/5] overview: Add a 'closing' getter
+
+Which better communicates what we are checking for, and is a little more
+elegant than repeatedly writing:
+```
+Main.overview.animationInProgress && Main.overview.visibleTarget == false
+```
+---
+ js/ui/overview.js | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/js/ui/overview.js b/js/ui/overview.js
+index 78736e513e..e0a9519ea6 100644
+--- a/js/ui/overview.js
++++ b/js/ui/overview.js
+@@ -155,6 +155,10 @@ var Overview = class {
+         return this._visibleTarget;
+     }
+ 
++    get closing() {
++        return this._animationInProgress && !this._visibleTarget;
++    }
++
+     _createOverview() {
+         if (this._overview)
+             return;
+-- 
+GitLab
+
+
+From 2b77e4c891478c8edd3c5326e339121f4cae7f49 Mon Sep 17 00:00:00 2001
+From: Daniel van Vugt <daniel.van.vugt@canonical.com>
+Date: Wed, 16 Sep 2020 14:56:13 +0800
+Subject: [PATCH 2/5] workspace: Ignore new windows that appear while the
+ overview is closing
+
+This can easily happen if an app launches and maps a window faster than
+the overview closes. We don't want the window clone appearing and then
+suddenly disappearing in that case.
+---
+ js/ui/workspace.js | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/js/ui/workspace.js b/js/ui/workspace.js
+index 1a5bd02271..9ede6d6156 100644
+--- a/js/ui/workspace.js
++++ b/js/ui/workspace.js
+@@ -1225,7 +1225,8 @@ class Workspace extends St.Widget {
+     }
+ 
+     _windowAdded(metaWorkspace, metaWin) {
+-        this._doAddWindow(metaWin);
++        if (!Main.overview.closing)
++            this._doAddWindow(metaWin);
+     }
+ 
+     _windowRemoved(metaWorkspace, metaWin) {
+@@ -1233,7 +1234,7 @@ class Workspace extends St.Widget {
+     }
+ 
+     _windowEnteredMonitor(metaDisplay, monitorIndex, metaWin) {
+-        if (monitorIndex == this.monitorIndex)
++        if (monitorIndex === this.monitorIndex && !Main.overview.closing)
+             this._doAddWindow(metaWin);
+     }
+ 
+-- 
+GitLab
+
+
+From fad78c98eca1e9e0a4874b0902b6c23540aed5ee Mon Sep 17 00:00:00 2001
+From: Daniel van Vugt <daniel.van.vugt@canonical.com>
+Date: Wed, 16 Sep 2020 15:03:47 +0800
+Subject: [PATCH 3/5] windowManager: Allow animations to start if the overview
+ is closing
+
+So the `WindowManager._mapWindow` animation doesn't get skipped if the
+overview is visible but closing.
+---
+ js/ui/windowManager.js | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/js/ui/windowManager.js b/js/ui/windowManager.js
+index 34c54b61e1..81d5360fc6 100644
+--- a/js/ui/windowManager.js
++++ b/js/ui/windowManager.js
+@@ -1122,7 +1122,8 @@ var WindowManager = class {
+     }
+ 
+     _shouldAnimate() {
+-        return !(Main.overview.visible || this._workspaceAnimation.gestureActive);
++        const overviewOpen = Main.overview.visible && !Main.overview.closing;
++        return !(overviewOpen || this._workspaceAnimation.gestureActive);
+     }
+ 
+     _shouldAnimateActor(actor, types) {
+-- 
+GitLab
+
+
+From d08b6a4ee0d8158e43e41917b5433d2c8c544929 Mon Sep 17 00:00:00 2001
+From: Daniel van Vugt <daniel.van.vugt@canonical.com>
+Date: Thu, 17 Sep 2020 15:24:12 +0800
+Subject: [PATCH 4/5] overview: Emit 'hidden' after it's *really* hidden
+
+Previously we would emit 'hidden' before the overview was fully hidden,
+so any attempts to animate windows on that signal could still fail.
+---
+ js/ui/overview.js | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/js/ui/overview.js b/js/ui/overview.js
+index e0a9519ea6..f7b07ebd3c 100644
+--- a/js/ui/overview.js
++++ b/js/ui/overview.js
+@@ -629,7 +629,6 @@ var Overview = class {
+         this._visible = false;
+         this._animationInProgress = false;
+ 
+-        this.emit('hidden');
+         // Handle any calls to show* while we were hiding
+         if (this._shown)
+             this._animateVisible();
+@@ -639,6 +638,8 @@ var Overview = class {
+         Main.panel.style = null;
+ 
+         this._syncGrab();
++
++        this.emit('hidden');
+     }
+ 
+     toggle() {
+-- 
+GitLab
+
+
+From 44d1a59f1c419507368d0fdf249eed6cde397345 Mon Sep 17 00:00:00 2001
+From: Daniel van Vugt <daniel.van.vugt@canonical.com>
+Date: Thu, 17 Sep 2020 15:25:49 +0800
+Subject: [PATCH 5/5] windowManager: Animate the appearance of new windows
+ after overview closes
+
+So that the animation doesn't get skipped if the overview is visible but
+in the process of closing.
+
+In this case the overview being visible also means that it is closing,
+because if it's visible and not already closing then `_shouldAnimateActor`
+would have returned false and exited `_mapWindow` earlier.
+
+Fixes: https://gitlab.gnome.org/GNOME/gnome-shell/-/issues/1814,
+       https://gitlab.gnome.org/GNOME/gnome-shell/-/issues/3242
+---
+ js/ui/windowManager.js | 15 +++++++++++++--
+ 1 file changed, 13 insertions(+), 2 deletions(-)
+
+diff --git a/js/ui/windowManager.js b/js/ui/windowManager.js
+index 81d5360fc6..3aa111017d 100644
+--- a/js/ui/windowManager.js
++++ b/js/ui/windowManager.js
+@@ -1450,6 +1450,17 @@ var WindowManager = class {
+         dimmer.setDimmed(false, this._shouldAnimate());
+     }
+ 
++    _easeAfterOverview(actor, props) {
++        if (Main.overview.visible) {
++            let id = Main.overview.connect('hidden', () => {
++                actor.ease(props);
++                Main.overview.disconnect(id);
++            });
++        } else {
++            actor.ease(props);
++        }
++    }
++
+     _mapWindow(shellwm, actor) {
+         actor._windowType = actor.meta_window.get_window_type();
+         actor._notifyWindowTypeSignalId =
+@@ -1492,7 +1503,7 @@ var WindowManager = class {
+             actor.show();
+             this._mapping.add(actor);
+ 
+-            actor.ease({
++            this._easeAfterOverview(actor, {
+                 opacity: 255,
+                 scale_x: 1,
+                 scale_y: 1,
+@@ -1509,7 +1520,7 @@ var WindowManager = class {
+             actor.show();
+             this._mapping.add(actor);
+ 
+-            actor.ease({
++            this._easeAfterOverview(actor, {
+                 opacity: 255,
+                 scale_x: 1,
+                 scale_y: 1,
+-- 
+GitLab
+

@@ -1,0 +1,32 @@
+From a21058e6c9008bb6145e6c8e48e3c2f5452e68e8 Mon Sep 17 00:00:00 2001
+From: Daniel van Vugt <daniel.van.vugt@canonical.com>
+Date: Thu, 3 Jun 2021 20:16:12 +0800
+Subject: [PATCH] st/icon: Rebuild shadows when the texture dimensions change
+
+Not when the main actor dimensions change. So now the shadows don't get
+constantly regenerated during the overview animation. In my case this
+reduces the render time of the overview animation (tapping Super) by
+approximately 10% with 2 windows, or 20% with 10 windows.
+
+Part-of: <https://gitlab.gnome.org/GNOME/gnome-shell/-/merge_requests/1869>
+---
+ src/st/st-icon.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/st/st-icon.c b/src/st/st-icon.c
+index c9d7a85e52..c43d7c91bd 100644
+--- a/src/st/st-icon.c
++++ b/src/st/st-icon.c
+@@ -359,7 +359,8 @@ st_icon_update_shadow_pipeline (StIcon *icon)
+       ClutterActorBox box;
+       float width, height;
+ 
+-      clutter_actor_get_allocation_box (CLUTTER_ACTOR (icon), &box);
++      clutter_actor_get_allocation_box (CLUTTER_ACTOR (priv->icon_texture),
++                                        &box);
+       clutter_actor_box_get_size (&box, &width, &height);
+ 
+       if (priv->shadow_pipeline == NULL ||
+-- 
+GitLab
+

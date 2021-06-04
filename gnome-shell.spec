@@ -2,7 +2,7 @@
 
 Name:           gnome-shell
 Version:        40.1
-Release:        1%{?dist}
+Release:        1%{?dist}.patched
 Summary:        Window management and application launching for GNOME
 
 License:        GPLv2+
@@ -12,11 +12,21 @@ Source0: http://download.gnome.org/sources/gnome-shell/40/%{name}-%{tarball_vers
 # Replace Epiphany with Firefox in the default favourite apps list
 Patch1: gnome-shell-favourite-apps-firefox.patch
 
+
+# Upstream performance patches
+## WallClock refs fix
+Patch2: 923.patch
+
+#$ Overview optimization
+Patch3: 1862.patch
+Patch4: 1862-css.patch
+Patch5: 1869.patch
+Patch6: 1440.patch
+
+
 # Some users might have a broken PAM config, so we really need this
 # downstream patch to stop trying on configuration errors.
 Patch10005: 0001-gdm-Work-around-failing-fingerprint-auth.patch
-
-
 %define eds_version 3.33.1
 %define gnome_desktop_version 3.35.91
 %define glib2_version 2.56.0
@@ -1514,7 +1524,7 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/evolution-calendar.de
 
 * Fri Sep  4 2009 Owen Taylor <otaylor@redhat.com> - 2.27.2-1
 - Update to 2.27.2
-- Add an explicit dep on gobject-introspection 0.6.5 which is required 
+- Add an explicit dep on gobject-introspection 0.6.5 which is required
   for the new version
 
 * Sat Aug 29 2009 Owen Taylor <otaylor@redhat.com> - 2.27.1-4
