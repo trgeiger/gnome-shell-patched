@@ -1,0 +1,57 @@
+From 77df6005cc379edcec1e8efe727de57e84ed13ce Mon Sep 17 00:00:00 2001
+From: Harshad Gavali <harshadgavali@outlook.com>
+Date: Tue, 15 Jun 2021 00:35:32 +0530
+Subject: [PATCH] workspace: Fix animation when transitioning from session to
+ appgrid
+
+This ensure that fix intended by commit 2d954c07fb3bb98c5c91177c965a8df5bffa4175,
+applies throughout the transition from session to appgrid and vice-versa,
+instead of applying only from window-picker to appgrid.
+
+We also want to clip workspace by allocated area throughout the transition from session to appgrid.
+---
+ js/ui/workspace.js | 14 +++++++++++---
+ 1 file changed, 11 insertions(+), 3 deletions(-)
+
+diff --git a/js/ui/workspace.js b/js/ui/workspace.js
+index 75efe4d992..f7b2c0b5b3 100644
+--- a/js/ui/workspace.js
++++ b/js/ui/workspace.js
+@@ -627,14 +627,18 @@ var WorkspaceLayout = GObject.registerClass({
+         }
+ 
+         const { ControlsState } = OverviewControls;
+-        const inSessionTransition =
+-            this._overviewAdjustment.value <= ControlsState.WINDOW_PICKER;
++
++        const overviewTransitionParams = this._overviewAdjustment.getStateTransitionParams();
++        const transitionMaxState = Math.max(overviewTransitionParams.initialState, overviewTransitionParams.finalState);
++        const transitionMinState = Math.min(overviewTransitionParams.initialState, overviewTransitionParams.finalState);
++        const inSessionTransition = transitionMaxState <= ControlsState.WINDOW_PICKER;
+ 
+         const window = this._sortedWindows[0];
+ 
+         if (inSessionTransition || !window) {
+             container.remove_clip();
+-        } else {
++            container.clip_to_allocation = false;
++        } else if (transitionMinState === ControlsState.WINDOW_PICKER) {
+             const [, bottomOversize] = window.chromeHeights();
+             const [containerX, containerY] = containerBox.get_origin();
+ 
+@@ -643,8 +647,12 @@ var WorkspaceLayout = GObject.registerClass({
+ 
+             const extraClipHeight = bottomOversize * (1 - extraHeightProgress);
+ 
++            container.clip_to_allocation = false;
+             container.set_clip(containerX, containerY,
+                 containerWidth, containerHeight + extraClipHeight);
++        } else {
++            container.remove_clip();
++            container.clip_to_allocation = true;
+         }
+ 
+         let layoutChanged = false;
+-- 
+GitLab
+

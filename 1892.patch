@@ -1,0 +1,290 @@
+From f5f59185335ae187886a92626820a8bc4a3cd262 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Marco=20Trevisan=20=28Trevi=C3=B1o=29?= <mail@3v1n0.net>
+Date: Fri, 18 Jun 2021 19:11:34 +0200
+Subject: [PATCH 1/4] WorkspaceBackground: Fully take care of workarea geometry
+ on allocation
+
+The background group is currently allocated taking care of the workarea
+x, y offset but not of its width/height and this may lead to building a
+wrongly sized workspace view when the workarea size is not matching the
+monitor size (like when there are struts set).
+
+So, take care of the difference between the workarea and monitor
+absolute end coordinates to allocate the background scaled content box.
+---
+ js/ui/workspace.js | 22 +++++++++++++++-------
+ 1 file changed, 15 insertions(+), 7 deletions(-)
+
+diff --git a/js/ui/workspace.js b/js/ui/workspace.js
+index 75efe4d992..fafa368ce7 100644
+--- a/js/ui/workspace.js
++++ b/js/ui/workspace.js
+@@ -1012,13 +1012,21 @@ class WorkspaceBackground extends St.Widget {
+ 
+         const [contentWidth, contentHeight] = contentBox.get_size();
+         const monitor = Main.layoutManager.monitors[this._monitorIndex];
+-        const xOff = (contentWidth / this._workarea.width) *
+-            (this._workarea.x - monitor.x);
+-        const yOff = (contentHeight / this._workarea.height) *
+-            (this._workarea.y - monitor.y);
+-
+-        contentBox.set_origin(-xOff, -yOff);
+-        contentBox.set_size(xOff + contentWidth, yOff + contentHeight);
++        const [mX1, mX2] = [monitor.x, monitor.x + monitor.width];
++        const [mY1, mY2] = [monitor.y, monitor.y + monitor.height];
++        const [wX1, wX2] = [this._workarea.x, this._workarea.x + this._workarea.width];
++        const [wY1, wY2] = [this._workarea.y, this._workarea.y + this._workarea.height];
++        const xScale = contentWidth / this._workarea.width;
++        const yScale = contentHeight / this._workarea.height;
++        const leftOffset = wX1 - mX1;
++        const topOffset = wY1 - mY1;
++        const rightOffset = mX2 - wX2;
++        const bottomOffset = mY2 - wY2;
++
++        contentBox.set_origin(-leftOffset * xScale, -topOffset * yScale);
++        contentBox.set_size(
++            contentWidth + (leftOffset + rightOffset) * xScale,
++            contentHeight + (topOffset + bottomOffset) * yScale);
+         this._backgroundGroup.allocate(contentBox);
+     }
+ 
+-- 
+GitLab
+
+
+From 1a2fe8dd4c62a8b45d14fc7777cf259b8971aa75 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Marco=20Trevisan=20=28Trevi=C3=B1o=29?= <mail@3v1n0.net>
+Date: Fri, 18 Jun 2021 19:28:55 +0200
+Subject: [PATCH 2/4] ControlsManagerLayout: Use the workarea size to compute
+ the available height
+
+To compute the available height for the layout we're currently using the
+panel position, while this works for the current and default setup, the
+shell may be configured to use a different workarea, so we should rely on
+it to compute the available space, instead of a specific widget.
+
+So get the current monitor index for the current view nd use its coordinates
+instead.
+---
+ js/ui/overviewControls.js | 9 ++++-----
+ 1 file changed, 4 insertions(+), 5 deletions(-)
+
+diff --git a/js/ui/overviewControls.js b/js/ui/overviewControls.js
+index 88726573dc..14a90dc27c 100644
+--- a/js/ui/overviewControls.js
++++ b/js/ui/overviewControls.js
+@@ -130,11 +130,10 @@ class ControlsManagerLayout extends Clutter.BoxLayout {
+ 
+         const { spacing } = this;
+ 
+-        let startY = 0;
+-        if (Main.layoutManager.panelBox.y === Main.layoutManager.primaryMonitor.y) {
+-            startY = Main.layoutManager.panelBox.height;
+-            box.y1 += startY;
+-        }
++        const monitor = Main.layoutManager.findMonitorForActor(this._container);
++        const workArea = Main.layoutManager.getWorkAreaForMonitor(monitor.index);
++        const startY = workArea.y - monitor.y;
++        box.y1 += startY;
+         const [width, height] = box.get_size();
+         let availableHeight = height;
+ 
+-- 
+GitLab
+
+
+From ae62289b1097347f1d623c5748078fa09ad46dc9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Marco=20Trevisan=20=28Trevi=C3=B1o=29?= <mail@3v1n0.net>
+Date: Fri, 18 Jun 2021 19:47:24 +0200
+Subject: [PATCH 3/4] ControlsManagerLayout: Consider workarea height for the
+ available space
+
+We always consider the whole workarea space to be available when
+computing the controls manager layout, however this may not be the truth
+when using extensions such as Window List which are reducing the work
+area size.
+
+So take care of it, reducing the box height.
+
+Fixes: https://gitlab.gnome.org/GNOME/gnome-shell/-/issues/4330
+---
+ js/ui/overviewControls.js | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/js/ui/overviewControls.js b/js/ui/overviewControls.js
+index 14a90dc27c..f13ff2c58d 100644
+--- a/js/ui/overviewControls.js
++++ b/js/ui/overviewControls.js
+@@ -134,6 +134,7 @@ class ControlsManagerLayout extends Clutter.BoxLayout {
+         const workArea = Main.layoutManager.getWorkAreaForMonitor(monitor.index);
+         const startY = workArea.y - monitor.y;
+         box.y1 += startY;
++        box.y2 -= (monitor.height - workArea.height) - startY;
+         const [width, height] = box.get_size();
+         let availableHeight = height;
+ 
+-- 
+GitLab
+
+
+From 2dc0da08f135edcf3f655c14027aea731b9a1774 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Marco=20Trevisan=20=28Trevi=C3=B1o=29?= <mail@3v1n0.net>
+Date: Fri, 18 Jun 2021 19:51:02 +0200
+Subject: [PATCH 4/4] ControlsManagerLayout: Allocate respecting the work area
+
+We build controls layout using the whole monitor vertical space as
+available, however extensions or external apps in X11 may reduce the
+workarea size horizontally and the shell should always take care of it.
+
+Given that we're already assuming that the allocation is monitor-based
+and that we're adjusting it to the workarea, we can just make it more
+explicit by using a workarea box that is used as the allocation area.
+
+As per this, we also apply the same logic of applied to the vertical
+dimension to the horizontal one.
+---
+ js/ui/overviewControls.js | 45 ++++++++++++++++++++++-----------------
+ 1 file changed, 25 insertions(+), 20 deletions(-)
+
+diff --git a/js/ui/overviewControls.js b/js/ui/overviewControls.js
+index f13ff2c58d..ca7b2726c6 100644
+--- a/js/ui/overviewControls.js
++++ b/js/ui/overviewControls.js
+@@ -47,8 +47,9 @@ class ControlsManagerLayout extends Clutter.BoxLayout {
+         stateAdjustment.connect('notify::value', () => this.layout_changed());
+     }
+ 
+-    _computeWorkspacesBoxForState(state, box, startY, searchHeight, dashHeight, thumbnailsHeight) {
+-        const workspaceBox = box.copy();
++    _computeWorkspacesBoxForState(state, workAreaBox, searchHeight, dashHeight, thumbnailsHeight) {
++        const workspaceBox = workAreaBox.copy();
++        const [startX, startY] = workAreaBox.get_origin();
+         const [width, height] = workspaceBox.get_size();
+         const { spacing } = this;
+         const { expandFraction } = this._workspacesThumbnails;
+@@ -57,7 +58,7 @@ class ControlsManagerLayout extends Clutter.BoxLayout {
+         case ControlsState.HIDDEN:
+             break;
+         case ControlsState.WINDOW_PICKER:
+-            workspaceBox.set_origin(0,
++            workspaceBox.set_origin(startX,
+                 startY + searchHeight + spacing +
+                 thumbnailsHeight + spacing * expandFraction);
+             workspaceBox.set_size(width,
+@@ -67,7 +68,7 @@ class ControlsManagerLayout extends Clutter.BoxLayout {
+                 thumbnailsHeight - spacing * expandFraction);
+             break;
+         case ControlsState.APP_GRID:
+-            workspaceBox.set_origin(0, startY + searchHeight + spacing);
++            workspaceBox.set_origin(startX, startY + searchHeight + spacing);
+             workspaceBox.set_size(
+                 width,
+                 Math.round(height * SMALL_WORKSPACE_RATIO));
+@@ -77,18 +78,19 @@ class ControlsManagerLayout extends Clutter.BoxLayout {
+         return workspaceBox;
+     }
+ 
+-    _getAppDisplayBoxForState(state, box, startY, searchHeight, dashHeight, appGridBox) {
+-        const [width, height] = box.get_size();
++    _getAppDisplayBoxForState(state, workAreaBox, searchHeight, dashHeight, appGridBox) {
++        const [startX, startY] = workAreaBox.get_origin();
++        const [width, height] = workAreaBox.get_size();
+         const appDisplayBox = new Clutter.ActorBox();
+         const { spacing } = this;
+ 
+         switch (state) {
+         case ControlsState.HIDDEN:
+         case ControlsState.WINDOW_PICKER:
+-            appDisplayBox.set_origin(0, box.y2);
++            appDisplayBox.set_origin(startX, workAreaBox.y2);
+             break;
+         case ControlsState.APP_GRID:
+-            appDisplayBox.set_origin(0,
++            appDisplayBox.set_origin(startX,
+                 startY + searchHeight + spacing + appGridBox.get_height());
+             break;
+         }
+@@ -125,34 +127,37 @@ class ControlsManagerLayout extends Clutter.BoxLayout {
+         return [0, 0];
+     }
+ 
+-    vfunc_allocate(container, box) {
++    vfunc_allocate(_container, _box) {
+         const childBox = new Clutter.ActorBox();
+ 
+         const { spacing } = this;
+ 
+         const monitor = Main.layoutManager.findMonitorForActor(this._container);
+         const workArea = Main.layoutManager.getWorkAreaForMonitor(monitor.index);
++        const startX = workArea.x - monitor.x;
+         const startY = workArea.y - monitor.y;
+-        box.y1 += startY;
+-        box.y2 -= (monitor.height - workArea.height) - startY;
+-        const [width, height] = box.get_size();
++        const workAreaBox = new Clutter.ActorBox();
++        workAreaBox.set_origin(startX, startY);
++        workAreaBox.set_size(workArea.width, workArea.height);
++        const [width, height] = workAreaBox.get_size();
+         let availableHeight = height;
++        const availableWidth = width;
+ 
+         // Search entry
+         let [searchHeight] = this._searchEntry.get_preferred_height(width);
+-        childBox.set_origin(0, startY);
++        childBox.set_origin(startX, startY);
+         childBox.set_size(width, searchHeight);
+         this._searchEntry.allocate(childBox);
+ 
+         availableHeight -= searchHeight + spacing;
+ 
+         // Dash
+-        const maxDashHeight = Math.round(box.get_height() * DASH_MAX_HEIGHT_RATIO);
++        const maxDashHeight = Math.round(workAreaBox.get_height() * DASH_MAX_HEIGHT_RATIO);
+         this._dash.setMaxSize(width, maxDashHeight);
+ 
+         let [, dashHeight] = this._dash.get_preferred_height(width);
+         dashHeight = Math.min(dashHeight, maxDashHeight);
+-        childBox.set_origin(0, startY + height - dashHeight);
++        childBox.set_origin(startX, startY + height - dashHeight);
+         childBox.set_size(width, dashHeight);
+         this._dash.allocate(childBox);
+ 
+@@ -167,13 +172,13 @@ class ControlsManagerLayout extends Clutter.BoxLayout {
+             thumbnailsHeight = Math.min(
+                 thumbnailsHeight * expandFraction,
+                 height * WorkspaceThumbnail.MAX_THUMBNAIL_SCALE);
+-            childBox.set_origin(0, startY + searchHeight + spacing);
++            childBox.set_origin(startX, startY + searchHeight + spacing);
+             childBox.set_size(width, thumbnailsHeight);
+             this._workspacesThumbnails.allocate(childBox);
+         }
+ 
+         // Workspaces
+-        let params = [box, startY, searchHeight, dashHeight, thumbnailsHeight];
++        let params = [workAreaBox, searchHeight, dashHeight, thumbnailsHeight];
+         const transitionParams = this._stateAdjustment.getStateTransitionParams();
+ 
+         // Update cached boxes
+@@ -198,7 +203,7 @@ class ControlsManagerLayout extends Clutter.BoxLayout {
+             const workspaceAppGridBox =
+                 this._cachedWorkspaceBoxes.get(ControlsState.APP_GRID);
+ 
+-            params = [box, startY, searchHeight, dashHeight, workspaceAppGridBox];
++            params = [workAreaBox, searchHeight, dashHeight, workspaceAppGridBox];
+             let appDisplayBox;
+             if (!transitionParams.transitioning) {
+                 appDisplayBox =
+@@ -216,8 +221,8 @@ class ControlsManagerLayout extends Clutter.BoxLayout {
+         }
+ 
+         // Search
+-        childBox.set_origin(0, startY + searchHeight + spacing);
+-        childBox.set_size(width, availableHeight);
++        childBox.set_origin(startX, startY + searchHeight + spacing);
++        childBox.set_size(availableWidth, availableHeight);
+ 
+         this._searchController.allocate(childBox);
+ 
+-- 
+GitLab
+

@@ -1,0 +1,31 @@
+From 8ac3516f0c57fb779eda4341f7eb5db4471cd50d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Florian=20M=C3=BCllner?= <fmuellner@gnome.org>
+Date: Fri, 18 Jun 2021 23:15:05 +0200
+Subject: [PATCH] messageTray: Do not show low priority notifications
+
+Low priority notifications are meant for information that doesn't require
+immediate attention, so it makes sense to not show a banner for them;
+they'll still appear in the notification list in the calendar.
+
+https://gitlab.gnome.org/GNOME/gnome-shell/-/issues/4265
+---
+ js/ui/messageTray.js | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/js/ui/messageTray.js b/js/ui/messageTray.js
+index b793f8a167..84d308ec0a 100644
+--- a/js/ui/messageTray.js
++++ b/js/ui/messageTray.js
+@@ -771,6 +771,9 @@ var Source = GObject.registerClass({
+         notification.acknowledged = false;
+         this.pushNotification(notification);
+ 
++        if (notification.urgency === Urgency.LOW)
++            return;
++
+         if (this.policy.showBanners || notification.urgency == Urgency.CRITICAL)
+             this.emit('notification-show', notification);
+     }
+-- 
+GitLab
+
