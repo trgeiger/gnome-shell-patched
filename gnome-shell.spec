@@ -1,7 +1,7 @@
 %global tarball_version %%(echo %{version} | tr '~' '.')
 
 Name:           gnome-shell
-Version:        40.2
+Version:        40.3
 Release:        1%{?dist}.patched
 Summary:        Window management and application launching for GNOME
 
@@ -11,10 +11,13 @@ Source0: http://download.gnome.org/sources/gnome-shell/40/%{name}-%{tarball_vers
 
 # Replace Epiphany with Firefox in the default favourite apps list
 Patch1: gnome-shell-favourite-apps-firefox.patch
-Patch2: 1893.patch
-Patch3: 1899.patch
-Patch4: 1887.patch
-Patch5: 1892.patch
+
+Patch10: 1440.patch
+Patch11: 923.patch
+Patch12: 1893.patch
+Patch13: 1892.patch
+Patch14: 1907.patch
+Patch15: 1887.patch
 
 # Some users might have a broken PAM config, so we really need this
 # downstream patch to stop trying on configuration errors.
@@ -238,6 +241,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/evolution-calendar.de
 %{_mandir}/man1/gnome-shell.1*
 
 %changelog
+* Mon Jul 12 2021 Florian Müllner <fmuellner@redhat.com> - 40.3-1
+- Update to 40.3
+
 * Thu Jun 10 2021 Florian Müllner <fmuellner@redhat.com> - 40.2-1
 - Update to 40.2
 
